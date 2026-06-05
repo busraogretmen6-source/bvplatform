@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Büşra Öğretmen Portal - Veli Paneli</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --gold: #d4af37;
+            --green: #044d29;
+            --bg-color: #181a1f; 
+            --card-bg: #21252b;  
+            --sidebar-bg: #111217; 
+            --text-primary: #ffffff;
+            --text-secondary: #8b949e;
+            --border-color: #2c313a;
+        }
+
+        body { background: var(--bg-color); color: var(--text-primary); font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; min-height: 100vh; }
+
+        .sidebar { width: 260px; height: 100vh; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 20px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; z-index: 10; }
+        .logo-container { width: 100%; text-align: center; margin-bottom: 40px; padding-top: 10px; }
+        .sidebar-logo { max-width: 150px; height: auto; display: block; margin: 0 auto; }
+
+        .nav-item { width: 100%; padding: 14px 18px; color: var(--text-secondary); cursor: pointer; border-radius: 8px; margin-bottom: 8px; transition: all 0.3s ease; display: flex; align-items: center; font-size: 15px; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background: var(--green); color: var(--gold); }
+        .nav-item i { margin-right: 15px; font-size: 1.2em; width: 25px; text-align: center; }
+        .logout-item { margin-top: auto; margin-bottom: 10px; }
+
+        .main-content { margin-left: 260px; padding: 40px 50px; width: calc(100% - 260px); }
+
+        .header-section { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+        #welcomeText { font-size: 26px; color: var(--text-primary); font-weight: 600; }
+        .date-display { color: var(--text-secondary); font-size: 14px; }
+        
+        .student-name-display { font-size: 20px; color: var(--gold); font-weight: 500; margin-bottom: 40px; display: flex; align-items: center; }
+        .student-name-display i { margin-right: 10px; color: var(--green); }
+
+        /* TAKVİM CSS */
+        .schedule-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 15px; margin-top: 15px; }
+        .schedule-day { background: #111217; padding: 15px; border-radius: 8px; border-top: 3px solid var(--gold); display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
+        .schedule-day-title { color: var(--gold); text-align: center; font-size: 14px; font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 5px; text-transform: uppercase;}
+        .schedule-lesson { background: var(--card-bg); padding: 12px 10px; font-size: 13px; border-radius: 6px; border-left: 4px solid var(--green); color: var(--text-primary); display: flex; flex-direction: column; gap: 5px;}
+        .schedule-lesson strong { color: var(--gold); font-size: 14px;}
+        .schedule-empty { color: var(--text-secondary); font-size: 12px; text-align: center; font-style: italic; margin-top: 10px;}
+        
+        @media (max-width: 1400px) { .schedule-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 900px) { .schedule-grid { grid-template-columns: repeat(2, 1fr); } }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-bottom: 40px; }
+        .stat-card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .stat-info { display: flex; flex-direction: column; }
+        .stat-card h3 { margin: 0 0 10px 0; color: var(--text-secondary); font-size: 13px; text-transform: uppercase; }
+        .stat-card .value { font-size: 34px; font-weight: bold; color: var(--gold); }
+        .stat-icon { font-size: 36px; color: var(--green); opacity: 0.9; }
+
+        .data-section { background: var(--card-bg); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
+        .section-header h3 { color: var(--text-primary); font-size: 18px; font-weight: 500; }
+
+        .tab-content { display: none; animation: fadeIn 0.4s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-container">
+            <img src="logo.png" alt="BV Platform Logo" class="sidebar-logo">
+        </div>
+
+        <div class="nav-item active" onclick="changeTab('dashboard-tab', this)"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></div>
+        <div class="nav-item" onclick="changeTab('raporlar-tab', this)"><i class="fa-solid fa-file-pdf"></i> <span>Raporlarım</span></div>
+        <div class="nav-item" onclick="changeTab('rozetler-tab', this)"><i class="fa-solid fa-award"></i> <span>Rozetler</span></div>
+
+        <div class="nav-item logout-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> <span>Çıkış Yap</span></div>
+    </div>
+
+    <div class="main-content">
+        <div class="header-section">
+            <h1 id="welcomeText">Yükleniyor...</h1>
+            <div class="date-display" id="currentDate"></div>
+        </div>
+        
+        <div class="student-name-display" id="studentName">
+            <i class="fa-solid fa-user-graduate"></i> Öğrenci: Yükleniyor...
+        </div>
+
+        <div id="dashboard-tab" class="tab-content active">
+            
+            <div class="data-section">
+                <div class="section-header">
+                    <h3><i class="fa-regular fa-calendar-days" style="color: var(--gold); margin-right: 10px;"></i> Haftalık Ders Programı</h3>
+                </div>
+                <div class="schedule-grid" id="schedule-container">
+                    <p style="color: var(--text-secondary); text-align: center; width: 100%;">Program yükleniyor...</p>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info"><h3>Bu Haftaki Soru</h3><div class="value" id="statSoru">0</div></div>
+                    <i class="stat-icon fa-solid fa-pencil"></i>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info"><h3>Son Deneme Neti</h3><div class="value" id="statNet">0.00</div></div>
+                    <i class="stat-icon fa-solid fa-chart-line"></i>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info"><h3>Başarı Rozetleri</h3><div class="value" id="statRozet">0</div></div>
+                    <i class="stat-icon fa-solid fa-trophy"></i>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <div class="section-header"><h3>Haftalık Gelişim Analizi</h3></div>
+                <div style="width: 100%; height: 200px;"><canvas id="progressChart"></canvas></div>
+            </div>
+        </div>
+
+        <div id="raporlar-tab" class="tab-content">
+            <div class="data-section">
+                 <div class="section-header"><h3>Dijital Rapor Arşivi</h3></div>
+                 <p style="color: var(--text-secondary);">Buraya öğrencinin haftalık PDF raporları listelenecektir.</p>
+                 <div style="margin-top: 15px; padding: 15px; background: var(--bg-color); border-radius: 8px; border: 1px solid var(--border-color); display:flex; justify-content: space-between;">
+                     <span style="color: var(--text-primary);">Haftalık Değerlendirme Raporu - Mayıs 3. Hafta</span>
+                     <span style="color: var(--gold); cursor: pointer;"><i class="fa-solid fa-download"></i> İndir</span>
+                 </div>
+            </div>
+        </div>
+
+        <div id="rozetler-tab" class="tab-content">
+            <div class="data-section" id="rozet-vitrini">
+                 <div class="section-header"><h3>Kazanılan Rozetler</h3></div>
+                 <p style="color: var(--text-secondary);">Veriler yükleniyor...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('tr-TR', dateOptions);
+
+        function changeTab(tabId, element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBN72EXR6QuwdFEwe42lDqnqGOjCgFL7oE",
+            authDomain: "busra-hoca-platform.firebaseapp.com",
+            projectId: "busra-hoca-platform",
+            storageBucket: "busra-hoca-platform.firebasestorage.app",
+            messagingSenderId: "361257580063",
+            appId: "1:361257580063:web:ce92167ceb7773c296472a"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentStudentName = "";
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                db.collection("ogrenciler").where("Veli Mail", "==", user.email).get()
+                .then((snapshot) => {
+                    if (!snapshot.empty) {
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            
+                            const veliAdi = data["Veli Adı"] || "Değerli Velimiz"; 
+                            currentStudentName = data["Ad Soyad"] || "Bilinmiyor";
+                            
+                            document.getElementById("welcomeText").innerText = `Hoş geldiniz, ${veliAdi}`;
+                            document.getElementById("studentName").innerHTML = `<i class="fa-solid fa-user-graduate"></i> Öğrenci: ${currentStudentName}`;
+                            document.getElementById("statSoru").innerText = data.haftalik_toplam_soru || 0;
+                            document.getElementById("statNet").innerText = data.son_deneme_neti || "0.00";
+
+                            const kazanilanRozetler = data.kazanilan_rozetler_listesi || []; 
+                            const rozetSayisi = kazanilanRozetler.length;
+                            document.getElementById("statRozet").innerText = rozetSayisi;
+
+                            const rozetVitrini = document.getElementById("rozet-vitrini");
+                            if (rozetSayisi > 0) {
+                                let rozetGorselleri = "";
+                                kazanilanRozetler.forEach(rozet => {
+                                    const resimUrl = rozet.url || "rozet_sampiyon.png"; 
+                                    const resimBasligi = rozet.title || "Başarı Rozeti";
+                                    rozetGorselleri += `<img src="${resimUrl}" style="width: 140px; margin: 15px; filter: drop-shadow(0px 10px 15px rgba(212, 175, 55, 0.2)); transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1) translateY(-5px)'" onmouseout="this.style.transform='scale(1) translateY(0)'" title="${resimBasligi}">`;
+                                });
+
+                                rozetVitrini.innerHTML = `
+                                    <div class="section-header"><h3>🏆 Kazanılan Rozetler</h3></div>
+                                    <div style="text-align: center; margin-top: 30px; display: flex; flex-wrap: wrap; justify-content: center;">
+                                        ${rozetGorselleri}
+                                    </div>
+                                    <p style="text-align: center; color: var(--gold); margin-top: 25px; font-weight: bold; font-size: 18px;">
+                                        Mükemmel! Toplam ${rozetSayisi} Adet Rozet Kazanıldı!
+                                    </p>
+                                `;
+                            } else {
+                                rozetVitrini.innerHTML = `
+                                     <div class="section-header"><h3>Kazanılan Rozetler</h3></div>
+                                     <p style="color: var(--text-secondary); text-align: center; margin-top: 30px;">Henüz kazanılan başarı rozeti bulunmamaktadır. Çalışmaya devam!</p>
+                                `;
+                            }
+
+                            // Programı çekiyoruz
+                            fetchDersProgrami();
+                        });
+                    }
+                })
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        async function fetchDersProgrami() {
+            const container = document.getElementById("schedule-container");
+            const gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+            const haftalikProgram = { "Pazartesi": [], "Salı": [], "Çarşamba": [], "Perşembe": [], "Cuma": [], "Cumartesi": [], "Pazar": [] };
+
+            try {
+                // Öğrenciye ait dersleri çek
+                const snapshot = await db.collection("dersler").where("Öğrenci", "==", currentStudentName).get();
+                
+                snapshot.forEach(doc => {
+                    const ders = doc.data();
+                    const gun = ders["Gün"];
+                    if (gun && haftalikProgram[gun] !== undefined) {
+                        haftalikProgram[gun].push(ders);
+                    }
+                });
+
+                let html = "";
+                gunler.forEach(gun => {
+                    let derslerHtml = "";
+                    const gununDersleri = haftalikProgram[gun];
+                    
+                    // Saate göre sırala
+                    gununDersleri.sort((a, b) => (a.Saat || a.saat || "").localeCompare(b.Saat || b.saat || ""));
+
+                    if (gununDersleri.length > 0) {
+                        gununDersleri.forEach(ders => {
+                            const dersAdi = ders["Ders"] || ders["Ders Adı"] || "Ders";
+                            const saat = ders["Saat"] || ders["saat"] || "";
+                            const konu = ders["Konu / Kategori"] ? `<div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">${ders["Konu / Kategori"]}</div>` : "";
+                            
+                            derslerHtml += `
+                                <div class="schedule-lesson">
+                                    <strong>${dersAdi}</strong>
+                                    <div style="font-size:12px; margin-top:4px;"><i class="fa-regular fa-clock"></i> ${saat}</div>
+                                    ${konu}
+                                </div>
+                            `;
+                        });
+                    } else {
+                        derslerHtml = `<div class="schedule-empty">Planlanmış Ders Yok</div>`;
+                    }
+
+                    html += `
+                        <div class="schedule-day">
+                            <div class="schedule-day-title">${gun}</div>
+                            ${derslerHtml}
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error("Ders programı çekilirken hata:", error);
+                container.innerHTML = "<p style='color:red;'>Ders programı yüklenemedi.</p>";
+            }
+        }
+
+        function logout() { auth.signOut().then(() => window.location.href = "index.html"); }
+    </script>
+</body>
+</html>

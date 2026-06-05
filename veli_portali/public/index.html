@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Büşra Öğretmen Portal - Sisteme Giriş</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            var(--gold): #d4af37;
+            var(--green): #044d29;
+            var(--bg-color): #181a1f; 
+            var(--card-bg): #21252b;  
+            var(--text-primary): #ffffff;
+            var(--text-secondary): #8b949e;
+            var(--border-color): #2c313a;
+        }
+
+        body {
+            background: #181a1f;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .login-container {
+            background: #21252b;
+            padding: 50px 40px;
+            border-radius: 15px;
+            border: 1px solid #2c313a;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .logo-img {
+            max-width: 180px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            color: #8b949e;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px;
+            background: #111217;
+            border: 1px solid #2c313a;
+            border-radius: 8px;
+            color: white;
+            font-size: 15px;
+            transition: 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #044d29;
+            box-shadow: 0 0 5px rgba(4, 77, 41, 0.5);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: #044d29;
+            color: #d4af37;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: #03381e;
+        }
+
+        .error-message {
+            color: #ff4d4d;
+            font-size: 14px;
+            margin-top: 15px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <img src="logo.png" alt="BV Platform Logo" class="logo-img">
+        
+        <div class="input-group">
+            <label>E-Posta Adresi</label>
+            <input type="email" id="email" placeholder="E-posta adresinizi girin">
+        </div>
+        
+        <div class="input-group">
+            <label>Şifre</label>
+            <input type="password" id="password" placeholder="Şifrenizi girin">
+        </div>
+
+        <button class="login-btn" id="loginBtn" onclick="login()">Sisteme Giriş Yap</button>
+        <div class="error-message" id="errorMsg"></div>
+    </div>
+
+    <script>
+        // Firebase Konfigürasyonu
+        const firebaseConfig = {
+            apiKey: "AIzaSyBN72EXR6QuwdFEwe42lDqnqGOjCgFL7oE",
+            authDomain: "busra-hoca-platform.firebaseapp.com",
+            projectId: "busra-hoca-platform",
+            storageBucket: "busra-hoca-platform.firebasestorage.app",
+            messagingSenderId: "361257580063",
+            appId: "1:361257580063:web:ce92167ceb7773c296472a"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Daha önceden giriş yapılmışsa otomatik yönlendirme
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                yonlendirmeYap(user.email);
+            }
+        });
+
+        function login() {
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const btn = document.getElementById("loginBtn");
+            const errorMsg = document.getElementById("errorMsg");
+
+            if (!email || !password) {
+                errorMsg.innerText = "Lütfen e-posta ve şifrenizi girin.";
+                return;
+            }
+
+            btn.innerText = "Giriş Yapılıyor...";
+            errorMsg.innerText = "";
+
+            // Firebase Authentication ile giriş kontrolü
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // onAuthStateChanged tetiklenecek, bir şey yapmaya gerek yok
+                })
+                .catch((error) => {
+                    errorMsg.innerText = "Hatalı e-posta veya şifre girdiniz.";
+                    btn.innerText = "Sisteme Giriş Yap";
+                });
+        }
+
+        // Veli mi Öğrenci mi yoksa Hoca mı kontrol eden asıl mantık
+        function yonlendirmeYap(userEmail) {
+            const errorMsg = document.getElementById("errorMsg");
+            const btn = document.getElementById("loginBtn");
+
+            // KRİTİK DÜZELTME: Maili kesinlikle küçük harfe çevir ve boşlukları sil
+            const temizMail = userEmail.trim().toLowerCase();
+
+            // TEST İÇİN EKRANA UYARI BASTIRIYORUZ
+            alert("Sistemin algıladığı mail adresi: " + temizMail);
+
+            // 1. ÖNCE VİP KONTROL: Büşra Hoca Girişi
+            if (temizMail === "busra@busraogretmen.com" || temizMail === "busra@bursaogretmen.com") {
+                window.location.href = "admin_dashboard.html"; // Öğretmen Paneli
+                return; // Kodun aşağıya inmesini engeller
+            }
+
+            // 2. Veli Mail olarak arıyoruz
+            db.collection("ogrenciler").where("Veli Mail", "==", temizMail).get()
+            .then((veliSnapshot) => {
+                if (!veliSnapshot.empty) {
+                    window.location.href = "dashboard.html"; // Veli Paneli
+                } else {
+                    // 3. Veli değilse, Ogrenci Mail olarak arıyoruz
+                    db.collection("ogrenciler").where("Ogrenci Mail", "==", temizMail).get()
+                    .then((ogrenciSnapshot) => {
+                        if (!ogrenciSnapshot.empty) {
+                            window.location.href = "student_dashboard.html"; // Öğrenci Paneli
+                        } else {
+                            // Ne Veli Ne Öğrenci Ne de Hoca veritabanında yoksa
+                            errorMsg.innerText = "Bu e-posta adresine tanımlı bir hesap bulunamadı.";
+                            auth.signOut();
+                            if(btn) btn.innerText = "Sisteme Giriş Yap";
+                        }
+                    });
+                }
+            })
+            .catch((error) => {
+                errorMsg.innerText = "Veritabanı bağlantı hatası: " + error.message;
+                auth.signOut();
+                if(btn) btn.innerText = "Sisteme Giriş Yap";
+            });
+        }
+    </script>
+</body>
+</html>

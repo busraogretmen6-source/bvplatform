@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Büşra Öğretmen Eğitim Platformu | Yönetim Paneli</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            /* Karanlık Tema Renk Paleti */
+            --gold: #d4af37; 
+            --green: #044d29; 
+            --bg-color: #181a1f; 
+            --card-bg: #21252b; 
+            --text-primary: #ffffff; 
+            --text-secondary: #8b949e; 
+            --border-color: #2c313a; 
+            --sidebar-bg: #111217; 
+        }
+
+        body { background: var(--bg-color); color: var(--text-primary); font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; min-height: 100vh; }
+
+        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; position: fixed; height: 100vh; left: 0; top: 0; z-index: 10; overflow-y: auto;}
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        
+        .logo-area { text-align: center; margin-bottom: 30px; padding-bottom: 10px; border-bottom: 2px solid var(--gold);}
+        .logo-img { max-width: 140px; margin-bottom: 10px; }
+        
+        .nav-item { padding: 12px 14px; color: var(--text-secondary); cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.3s; display: flex; align-items: center; font-weight: bold; font-size: 14px;}
+        .nav-item:hover, .nav-item.active { background: var(--green); color: var(--text-primary); }
+        .nav-item i { margin-right: 15px; font-size: 1.2em; width: 20px; text-align: center; color: var(--gold); }
+        
+        .nav-category { color: var(--gold); font-size: 11px; text-transform: uppercase; margin: 15px 0 5px 10px; letter-spacing: 1px; }
+
+        .logout-btn { margin-top: 30px; background: #ff4d4d; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%;}
+        .logout-btn:hover { background: #cc0000; }
+
+        .main-content { margin-left: 260px; padding: 40px; width: calc(100% - 260px); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; }
+        .header h1 { color: var(--gold); font-size: 26px; font-family: Georgia, serif; font-weight: bold; }
+
+        .tab-content { display: none; animation: fadeIn 0.4s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .data-section { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
+        
+        .form-input { width: 100%; padding: 12px; margin-bottom: 15px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-family: inherit;}
+        .form-input:focus { outline: none; border-color: var(--gold); }
+        .submit-btn { width: 100%; padding: 12px; background: var(--gold); color: black; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .submit-btn:hover { background: #b8972e; }
+
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); color: var(--text-primary);}
+        .data-table th { color: var(--gold); font-size: 13px; text-transform: uppercase; }
+        .data-table tr:hover { background-color: rgba(255, 255, 255, 0.05); }
+        
+        .btn-delete { background: #ff4d4d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;}
+        .btn-delete:hover { background: #cc0000; }
+        
+        .flex-container { display: flex; gap: 20px; }
+        .flex-child { flex: 1; }
+        .flex-child-2 { flex: 2; }
+        .inline-input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+
+        .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-height: 650px; overflow-y: auto; padding-right: 10px; }
+        .student-card { background: var(--sidebar-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .student-photo-wrapper { display: flex; justify-content: center; margin-bottom: 15px; }
+        .student-photo { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); background-color: var(--card-bg); display: flex; align-items: center; justify-content: center; font-size: 35px; color: var(--text-secondary); }
+        .student-info-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .student-info-row i { color: var(--gold); width: 16px; text-align: center; }
+
+        .file-drop-area { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; padding: 20px; border: 2px dashed var(--border-color); border-radius: 6px; background-color: var(--bg-color); transition: 0.3s; cursor: pointer; margin-bottom: 15px; }
+        .file-drop-area:hover { border-color: var(--gold); }
+        .file-drop-area input { position: absolute; left: 0; top: 0; height: 100%; width: 100%; cursor: pointer; opacity: 0; }
+        .file-msg { color: var(--text-secondary); font-size: 14px; font-weight: bold; }
+
+        .dashboard-stat-card { background: var(--card-bg); padding: 25px; border-radius: 12px; flex: 1; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border: 1px solid var(--border-color); }
+        .dashboard-schedule-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; min-height: 140px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .dashboard-schedule-header { background: #2c313a; color: var(--text-primary); text-align: center; padding: 10px; font-weight: bold; font-size: 14px; }
+        .dashboard-schedule-header.today { background: var(--green); color: white; }
+
+        /* YENİ EKLENEN CSS SINIFLARI */
+        .chat-container { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; height: 300px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .chat-bubble { max-width: 80%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.4;}
+        .chat-bot { background: var(--sidebar-bg); border: 1px solid var(--gold); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 0;}
+        .chat-user { background: var(--green); color: white; align-self: flex-end; border-bottom-right-radius: 0;}
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-area">
+            <img src="logo.png" alt="BV Platform Logo" class="logo-img" onerror="this.style.display='none'">
+        </div>
+        
+        <div class="nav-item active" onclick="changeTab('tab-dashboard', this)"><i class="fa-solid fa-house"></i> Ana Sayfa</div>
+        <div class="nav-item" onclick="changeTab('tab-ajanda', this)"><i class="fa-solid fa-calendar-check"></i> Kişisel Ajanda</div>
+        
+        <div class="nav-category">Öğrenci Yönetimi</div>
+        <div class="nav-item" onclick="changeTab('tab-ogrenciler', this)"><i class="fa-solid fa-users"></i> Öğrenci Listesi</div>
+        <div class="nav-item" onclick="changeTab('tab-rozetler', this)"><i class="fa-solid fa-award"></i> Başarı Rozetleri</div>
+        
+        <div class="nav-category">Eğitim & AI Asistan</div>
+        <div class="nav-item" onclick="changeTab('tab-asistan', this)"><i class="fa-solid fa-robot"></i> Büşra Hoca AI</div>
+        <div class="nav-item" onclick="changeTab('tab-mufredat', this)"><i class="fa-solid fa-book-bookmark"></i> Müfredat Sorgulama</div>
+        <div class="nav-item" onclick="changeTab('tab-aisoru', this)"><i class="fa-solid fa-brain"></i> AI Soru Bankası</div>
+
+        <div class="nav-category">Ders & Takip</div>
+        <div class="nav-item" onclick="changeTab('tab-dersler', this)"><i class="fa-solid fa-book-open-reader"></i> Ders Programı</div>
+        <div class="nav-item" onclick="changeTab('tab-yoklama', this)"><i class="fa-solid fa-user-check"></i> Yoklama Takibi</div>
+        <div class="nav-item" onclick="changeTab('tab-odevler', this)"><i class="fa-solid fa-book"></i> Ödev Takibi</div>
+        <div class="nav-item" onclick="changeTab('tab-konu', this)"><i class="fa-solid fa-list-check"></i> Konu Takibi</div>
+        <div class="nav-item" onclick="changeTab('tab-soru', this)"><i class="fa-solid fa-pen-nib"></i> Soru Takibi</div>
+
+        <div class="nav-category">Sınav & Raporlama</div>
+        <div class="nav-item" onclick="changeTab('tab-deneme', this)"><i class="fa-solid fa-file-signature"></i> Deneme Sınavları</div>
+        <div class="nav-item" onclick="changeTab('tab-telafi', this)"><i class="fa-solid fa-notes-medical"></i> Hata Telafi (PDF)</div>
+        <div class="nav-item" onclick="changeTab('tab-program', this)"><i class="fa-solid fa-calendar-days"></i> Özel Program Üretici</div>
+        <div class="nav-item" onclick="changeTab('tab-rapor', this)"><i class="fa-solid fa-chart-pie"></i> Haftalık Raporlar</div>
+
+        <div class="nav-category">Sistem & Finans</div>
+        <div class="nav-item" onclick="changeTab('tab-kaynaklar', this)"><i class="fa-solid fa-folder-open"></i> Kaynak Kütüphanesi</div>
+        <div class="nav-item" onclick="changeTab('tab-akademik', this)"><i class="fa-brands fa-whatsapp"></i> WhatsApp / Akademik</div>
+        <div class="nav-item" onclick="changeTab('tab-muhasebe', this)"><i class="fa-solid fa-wallet"></i> Muhasebe Takibi</div>
+        <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> ÇIKIŞ YAP</button>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="tab-dashboard" class="tab-content active">
+            <div style="text-align: center; border: none; padding: 20px 0 40px 0;">
+                <h1 style="color: var(--text-primary); font-family: Georgia, serif; margin-bottom: 30px; font-weight: bold;">Hoş Geldiniz, Büşra Hanım</h1>
+                
+                <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 25px;">
+                    <div class="dashboard-stat-card">
+                        <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Toplam Öğrenci</div>
+                        <div id="dashOgrenciSayisi" style="color: var(--green); font-size: 32px; font-weight: bold;">0</div>
+                    </div>
+                    <div class="dashboard-stat-card">
+                        <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Haftalık Ders</div>
+                        <div id="dashDersSayisi" style="color: var(--gold); font-size: 32px; font-weight: bold;">0</div>
+                    </div>
+                    <div class="dashboard-stat-card">
+                        <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">Bekleyen Ödemeler</div>
+                        <div id="dashOdemeSayisi" style="color: #ff4d4d; font-size: 32px; font-weight: bold;">0</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 20px; margin-bottom: 40px;">
+                    <div style="background: #e65c00; color: white; padding: 18px; border-radius: 8px; flex: 1; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        <i class="fa-solid fa-hourglass-half"></i> LGS'ye Kalan: <span id="lgsSayac">0</span> Gün
+                    </div>
+                    <div style="background: #0073e6; color: white; padding: 18px; border-radius: 8px; flex: 1; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        <i class="fa-solid fa-hourglass-half"></i> YKS'ye Kalan: <span id="yksSayac">0</span> Gün
+                    </div>
+                </div>
+
+                <div style="text-align: left; margin-bottom: 20px; border-bottom: 2px solid var(--gold); padding-bottom: 10px;">
+                    <h3 style="color: var(--text-primary); font-family: Georgia, serif; font-size: 22px;">Bu Haftaki Programım</h3>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 15px;" id="haftalikProgramGrid">
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-ajanda" class="tab-content">
+            <div class="data-section">
+                <h2 style="color: var(--green); margin-bottom: 20px;"><i class="fa-solid fa-clipboard-list"></i> Kişisel Ajanda (To-Do List)</h2>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="yeniGorevInput" class="form-input" placeholder="Yeni bir görev veya not ekleyin..." style="margin-bottom: 0;">
+                    <button class="submit-btn" style="width: 150px; margin-bottom: 0;" onclick="gorevEkle()">GÖREV EKLE</button>
+                </div>
+                <div id="ajandaListesi" style="max-height: 400px; overflow-y: auto; padding-right: 10px;"></div>
+            </div>
+        </div>
+
+        <div id="tab-ogrenciler" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-user-plus"></i> Yeni Öğrenci Ekle</h3>
+                    <form id="addStudentForm">
+                        <input type="text" id="ogrAd" class="form-input" placeholder="Öğrenci Adı Soyadı" required>
+                        <input type="text" id="ogrTel" class="form-input" placeholder="Öğrenci Telefon">
+                        <input type="email" id="ogrMail" class="form-input" placeholder="Öğrenci Mail" required>
+                        
+                        <div style="height: 1px; background: var(--border-color); margin: 15px 0;"></div>
+                        
+                        <input type="text" id="veliAd" class="form-input" placeholder="Veli Adı Soyadı" required>
+                        <input type="text" id="veliTel" class="form-input" placeholder="Veli Telefon" required>
+                        <input type="email" id="veliMail" class="form-input" placeholder="Veli Mail" required>
+                        <input type="text" id="veliYakinlik" class="form-input" placeholder="Yakınlık Derecesi (Örn: Anne)" required>
+                        
+                        <div style="height: 1px; background: var(--border-color); margin: 15px 0;"></div>
+                        <h4 style="color: var(--gold); font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Muhasebe / Finans Bilgileri</h4>
+                        
+                        <input type="text" id="ogrUcret" class="form-input" placeholder="Ücret Bilgisi (Örn: 5000 TL / Aylık)">
+                        <input type="text" id="ogrOdemeGunu" class="form-input" placeholder="Ödeme Günü (Örn: Her ayın 15'i)">
+
+                        <div class="file-drop-area">
+                            <span class="file-msg" id="fileNameDisplay"><i class="fa-solid fa-camera"></i> Fotoğraf Seç / Sürükle (İsteğe Bağlı)</span>
+                            <input type="file" id="ogrFoto" accept="image/png, image/jpeg, image/jpg">
+                        </div>
+
+                        <button type="submit" class="submit-btn">ÖĞRENCİYİ SİSTEME KAYDET</button>
+                    </form>
+                </div>
+                
+                <div class="data-section flex-child-2">
+                    <h3 style="color: var(--gold); margin-bottom: 15px;"><i class="fa-solid fa-address-card"></i> Kayıtlı Öğrenciler (<span id="ogrSayisi">0</span>)</h3>
+                    <div id="studentGrid" class="student-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-rozetler" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-medal"></i> Rozet Atama Merkezi</h3>
+                    <select id="rozetOgrenciSecici" class="form-input" onchange="ogrenciRozetleriniGoster()">
+                        <option value="">Öğrenci Seçin</option>
+                    </select>
+                    
+                    <select id="rozetTipiSecici" class="form-input">
+                        <option value="sampiyon">Haftanın Şampiyonu</option>
+                        <option value="ikinci">Haftanın İkincisi</option>
+                        <option value="ucuncu">Haftanın Üçüncüsü</option>
+                    </select>
+                    
+                    <button class="submit-btn" onclick="rozetGonder()">ROZET GÖNDER</button>
+                </div>
+                
+                <div class="data-section flex-child-2">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: var(--gold);"><i class="fa-solid fa-award"></i> Öğrencinin Rozet Geçmişi</h3>
+                    </div>
+                    <div id="rozetListesi" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; padding-right: 5px;">
+                        <p style="color: var(--text-secondary);">Görüntülemek için sol taraftan öğrenci seçin.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-dersler" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-calendar-plus"></i> Ders Planla</h3>
+                    <select id="dersOgrenciSecici" class="form-input">
+                        <option value="">Öğrenci Seçin</option>
+                    </select>
+                    <input type="text" id="dersAdiInput" class="form-input" placeholder="Ders Adı (Örn: İleri Cebir)">
+                    <select id="dersGunSecici" class="form-input">
+                        <option value="Pazartesi">Pazartesi</option>
+                        <option value="Salı">Salı</option>
+                        <option value="Çarşamba">Çarşamba</option>
+                        <option value="Perşembe">Perşembe</option>
+                        <option value="Cuma">Cuma</option>
+                        <option value="Cumartesi">Cumartesi</option>
+                        <option value="Pazar">Pazar</option>
+                    </select>
+                    <input type="time" id="dersSaatInput" class="form-input">
+                    <button class="submit-btn" onclick="dersEkle()">DERSİ KAYDET</button>
+                </div>
+                <div class="data-section flex-child-2">
+                    <h3 style="color: var(--gold); margin-bottom: 15px;"><i class="fa-solid fa-calendar-week"></i> Kayıtlı Dersler</h3>
+                    <div id="derslerListesi" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-yoklama" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-user-check"></i> Yoklama Girişi</h3>
+                    <select id="yoklamaOgrenciSecici" class="form-input">
+                        <option value="">Öğrenci Seçin</option>
+                    </select>
+                    <input type="date" id="yoklamaTarihInput" class="form-input" required>
+                    <input type="text" id="yoklamaDersInput" class="form-input" placeholder="Ders/Konu Adı (Örn: Matematik)">
+                    <select id="yoklamaDurumSecici" class="form-input">
+                        <option value="Geldi">Geldi</option>
+                        <option value="Gelmedi">Gelmedi</option>
+                        <option value="Geç Geldi">Geç Geldi</option>
+                        <option value="İptal">İptal</option>
+                    </select>
+                    <button class="submit-btn" onclick="yoklamaEkle()">YOKLAMAYI KAYDET</button>
+                </div>
+                <div class="data-section flex-child-2">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: var(--gold);"><i class="fa-solid fa-clock-rotate-left"></i> Yoklama Geçmişi</h3>
+                        <select id="yoklamaFiltreOgrenci" class="form-input" style="width: 200px; margin-bottom: 0;" onchange="yoklamalariDinle()">
+                            <option value="Tümü">Tüm Öğrenciler</option>
+                        </select>
+                    </div>
+                    <div id="yoklamaListesi" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-odevler" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-book-open"></i> Yeni Ödev Ver</h3>
+                    <select id="odevOgrenciSecici" class="form-input">
+                        <option value="">Öğrenci Seçin</option>
+                    </select>
+                    <input type="text" id="odevBaslik" class="form-input" placeholder="Ödev Başlığı (Örn: Polinomlar Test 1-2)" required>
+                    <input type="date" id="odevTarih" class="form-input" required>
+                    <textarea id="odevDetay" class="form-input" placeholder="Ödev detaylarını buraya yazın..." style="height: 100px; resize: none;"></textarea>
+                    <button class="submit-btn" onclick="odevEkle()">ÖDEVİ KAYDET</button>
+                </div>
+                <div class="data-section flex-child-2">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: var(--gold);"><i class="fa-solid fa-list-check"></i> Verilen Ödevler</h3>
+                        <select id="odevFiltreOgrenci" class="form-input" style="width: 200px; margin-bottom: 0;" onchange="odevleriDinle()">
+                            <option value="Tümü">Tüm Öğrenciler</option>
+                        </select>
+                    </div>
+                    <div id="odevListesi" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-konu" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-list-check"></i> Müfredata Konu Ekle</h3>
+                    <select id="konuOgrenciSecici" class="form-input">
+                        <option value="">Öğrenci Seçin</option>
+                    </select>
+                    <input type="text" id="konuKategori" class="form-input" placeholder="Kategori (Örn: TYT Matematik)">
+                    <input type="text" id="konuBaslik" class="form-input" placeholder="Konu Adı (Örn: Üslü Sayılar)">
+                    <button class="submit-btn" onclick="konuEkle()">MÜFREDATA EKLE</button>
+                </div>
+                <div class="data-section flex-child-2">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: var(--gold);"><i class="fa-solid fa-book"></i> İşlenecek Konular</h3>
+                        <select id="konuFiltreOgrenci" class="form-input" style="width: 200px; margin-bottom: 0;" onchange="konulariDinle()">
+                            <option value="Tümü">Tüm Öğrenciler</option>
+                        </select>
+                    </div>
+                    <div id="konuListesi" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-soru" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-pen-nib"></i> Soru & Net Kaydı Ekle</h3>
+                    <select id="soruOgrenciSecici" class="form-input">
+                        <option value="">Öğrenci Seçin</option>
+                    </select>
+                    <input type="text" id="soruDers" class="form-input" placeholder="Ders (Örn: Matematik)">
+                    <div class="inline-input-group">
+                        <input type="number" id="soruCozulen" class="form-input" style="margin-bottom:0;" placeholder="Çözülen Soru">
+                        <input type="number" id="soruDogru" class="form-input" style="margin-bottom:0;" placeholder="Doğru">
+                        <input type="number" id="soruYanlis" class="form-input" style="margin-bottom:0;" placeholder="Yanlış">
+                    </div>
+                    <button class="submit-btn" onclick="soruEkle()">KAYIT EKLE</button>
+                </div>
+                <div class="data-section flex-child-2">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: var(--gold);"><i class="fa-solid fa-chart-bar"></i> Soru Çözüm Geçmişi</h3>
+                        <select id="soruFiltreOgrenci" class="form-input" style="width: 200px; margin-bottom: 0;" onchange="sorulariDinle()">
+                            <option value="Tümü">Tüm Öğrenciler</option>
+                        </select>
+                    </div>
+                    <div id="soruListesi" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-muhasebe" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-file-invoice-dollar"></i> Ödeme Bilgisi Güncelle</h3>
+                    <select id="muhasebeOgrenciSecici" class="form-input">
+                        <option value="">Öğrenci Seçin</option>
+                    </select>
+                    <label style="color: var(--text-secondary); font-size: 13px;">Ücret Bilgisi:</label>
+                    <input type="text" id="muhasebeUcret" class="form-input" placeholder="Örn: 5000 TL / Aylık">
+                    <label style="color: var(--text-secondary); font-size: 13px;">Ödeme Günü:</label>
+                    <input type="text" id="muhasebeGun" class="form-input" placeholder="Örn: Her ayın 15'i">
+                    <button class="submit-btn" onclick="muhasebeKaydet()">BİLGİLERİ GÜNCELLE</button>
+                </div>
+                <div class="data-section flex-child-2" style="overflow-x: auto;">
+                    <h3 style="color: var(--gold); margin-bottom: 10px;"><i class="fa-solid fa-sack-dollar"></i> Öğrenci Finans Tablosu</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ad Soyad</th>
+                                <th>Ücret Bilgisi</th>
+                                <th>Ödeme Günü</th>
+                            </tr>
+                        </thead>
+                        <tbody id="muhasebeTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-asistan" class="tab-content">
+            <div class="data-section">
+                <h2 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-robot"></i> Büşra Hoca AI - Eğitim Asistanı</h2>
+                <div class="chat-container" id="aiSohbetGecmisi">
+                    <div class="chat-bubble chat-bot">
+                        Merhaba! Ben Büşra Hoca AI. Sistemdeki öğrencilere, ders programlarına ve müfredata hakimim. Sana nasıl yardımcı olabilirim? Öğrenci durumları veya program hakkında sorular sorabilirsin.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="aiMesajGirdisi" class="form-input" placeholder="Yapay zekaya bir soru sorun..." style="margin-bottom: 0;">
+                    <button class="submit-btn" style="width: 150px; margin-bottom: 0;" onclick="aiMesajGonder()"><i class="fa-solid fa-paper-plane"></i> GÖNDER</button>
+                    <button class="submit-btn" style="width: 60px; margin-bottom: 0; background: var(--green); color: white;" title="Sesli Soru Sor" onclick="alert('Sesli komut dinleniyor... (Python entegrasyonu gerektirir)')"><i class="fa-solid fa-microphone"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-mufredat" class="tab-content">
+            <div class="data-section">
+                <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-book-bookmark"></i> Güncel MEB Müfredat Sorgulama (AI)</h3>
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <select id="mufredatSinif" class="form-input" style="flex: 1;">
+                        <option value="9. Sınıf">9. Sınıf</option>
+                        <option value="10. Sınıf">10. Sınıf</option>
+                        <option value="11. Sınıf">11. Sınıf</option>
+                        <option value="12. Sınıf">12. Sınıf</option>
+                    </select>
+                    <select id="mufredatDers" class="form-input" style="flex: 1;">
+                        <option value="Matematik">Matematik</option>
+                        <option value="Geometri">Geometri</option>
+                    </select>
+                    <button class="submit-btn" style="flex: 1;" onclick="mufredatSorgula()"><i class="fa-solid fa-magnifying-glass"></i> AI İLE SORGULA</button>
+                </div>
+                <div id="mufredatSonucEkrani" style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; min-height: 200px; color: var(--text-primary); white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
+                    <span style="color: var(--text-secondary);">Sorgulama sonuçları burada görüntülenecektir... Google Gemini veritabanındaki en güncel MEB kazanımları listelenir.</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-aisoru" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-brain"></i> AI Soru Üretici</h3>
+                    <select id="aisoruDers" class="form-input">
+                        <option value="Matematik">Matematik</option>
+                        <option value="Geometri">Geometri</option>
+                    </select>
+                    <input type="text" id="aisoruKonu" class="form-input" placeholder="Konu (Örn: İkinci Dereceden Denklemler)">
+                    <select id="aisoruZorluk" class="form-input">
+                        <option value="Kolay">Kolay</option>
+                        <option value="Orta">Orta</option>
+                        <option value="Zor">Zor</option>
+                        <option value="ÖSYM Tarzı Yeni Nesil">ÖSYM Tarzı Yeni Nesil</option>
+                    </select>
+                    <input type="number" id="aisoruAdet" class="form-input" placeholder="Soru Sayısı (Örn: 10)">
+                    <button class="submit-btn" onclick="soruUret()"><i class="fa-solid fa-wand-magic-sparkles"></i> PDF SORU ÜRET</button>
+                </div>
+                <div class="data-section flex-child-2">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-file-pdf"></i> Son Üretilen Soru Bankaları</h3>
+                    <div id="aiSoruListesi" style="color: var(--text-secondary); font-style: italic;">Henüz üretilmiş bir soru bankası yok. Yapay zeka ile üretilen PDF'ler burada listelenecek.</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-deneme" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-file-signature"></i> Deneme Sonucu Gir</h3>
+                    <select id="denemeOgrenciSecici" class="form-input"><option value="">Öğrenci Seçin</option></select>
+                    <input type="text" id="denemeAdi" class="form-input" placeholder="Deneme Adı (Örn: Özdebir TYT 1)">
+                    <div class="inline-input-group">
+                        <input type="number" id="denemeDogru" class="form-input" placeholder="Doğru">
+                        <input type="number" id="denemeYanlis" class="form-input" placeholder="Yanlış">
+                        <input type="number" id="denemeNet" class="form-input" placeholder="Net">
+                    </div>
+                    <div class="file-drop-area">
+                        <span class="file-msg" id="denemePdfDisplay"><i class="fa-solid fa-file-pdf"></i> Sınav PDF'i Yükle (İsteğe Bağlı)</span>
+                        <input type="file" id="denemePdf" accept="application/pdf">
+                    </div>
+                    <button class="submit-btn" onclick="denemeSistemeEkle()"><i class="fa-solid fa-paper-plane"></i> KAYDET & MAİL AT</button>
+                </div>
+                <div class="data-section flex-child-2">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="color: var(--gold); margin-bottom: 0;"><i class="fa-solid fa-chart-line"></i> Deneme Geçmişi</h3>
+                        <select id="denemeFiltreOgrenci" class="form-input" style="width: 200px; margin-bottom: 0;" onchange="denemeleriDinle()">
+                            <option value="Tümü">Tüm Öğrenciler</option>
+                        </select>
+                    </div>
+                    <div id="denemeListesi" style="display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-telafi" class="tab-content">
+            <div class="data-section">
+                <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-notes-medical"></i> Akıllı Hata Telafi Modülü (Kişiye Özel PDF)</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Öğrencinin yanlış yaptığı veya eksik olduğu konulardan kişiye özel telafi testi üretin.</p>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <select id="telafiOgrenciSecici" class="form-input" style="flex: 1;"><option value="">Öğrenci Seçin</option></select>
+                    <input type="text" id="telafiKonu" class="form-input" style="flex: 1;" placeholder="Eksik Konu (Örn: Türev)">
+                    <input type="number" id="telafiSoruSayisi" class="form-input" style="flex: 1;" placeholder="Kaç Soru Üretilsin?">
+                </div>
+                <button class="submit-btn" onclick="alert('Telafi PDF i oluşturuluyor... (ReportLab entegrasyonu gerektirir)')"><i class="fa-solid fa-file-export"></i> KİŞİYE ÖZEL TELAFİ TESTİ (PDF) ÜRET</button>
+            </div>
+        </div>
+
+        <div id="tab-program" class="tab-content">
+            <div class="data-section">
+                <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-calendar-days"></i> AI Özel Çalışma Programı Üretici</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Öğrencinin eksiklerine ve hedeflerine göre yapay zeka destekli haftalık çalışma takvimi oluşturur.</p>
+                
+                <select id="programOgrenciSecici" class="form-input"><option value="">Öğrenci Seçin</option></select>
+                <textarea id="programNotlar" class="form-input" placeholder="Öğrenci için yapay zekaya özel notlar (Örn: Bu hafta mat ağırlıklı olsun, salı günü boş.)" style="height: 100px; resize: none;"></textarea>
+                <button class="submit-btn" onclick="alert('Yapay zeka programı analiz edip PDF oluşturuyor... (Gemini + ReportLab gerektirir)')"><i class="fa-solid fa-bolt"></i> YAPAY ZEKA İLE PROGRAM ÇIKAR</button>
+            </div>
+        </div>
+
+        <div id="tab-rapor" class="tab-content">
+            <div class="data-section">
+                <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-chart-pie"></i> Haftalık Gelişim Raporları</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Öğrencinin çözdüğü sorular, ödev durumu ve deneme netlerini analiz edip veliye şık bir PDF raporu gönderir.</p>
+                
+                <select id="raporOgrenciSecici" class="form-input"><option value="">Öğrenci Seçin</option></select>
+                <button class="submit-btn" onclick="alert('Haftalık istatistikler toplanıp Rapor hazırlanıyor... Velinin mailine otomatik iletilecektir.')"><i class="fa-solid fa-envelope-open-text"></i> RAPOR HAZIRLA VE VELİYE MAİL AT</button>
+            </div>
+        </div>
+
+        <div id="tab-kaynaklar" class="tab-content">
+            <div class="data-section">
+                <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-folder-open"></i> Kaynak Kütüphanesi (Google Drive Entegre)</h3>
+                <input type="text" class="form-input" placeholder="Kaynak, kitap veya PDF ara...">
+                <div style="background: var(--bg-color); border: 1px dashed var(--border-color); padding: 40px; text-align: center; border-radius: 8px; color: var(--text-secondary);">
+                    <i class="fa-brands fa-google-drive" style="font-size: 40px; margin-bottom: 15px; color: var(--gold);"></i>
+                    <p>Drive üzerindeki kaynaklarınız burada listelenecektir. G:\Drive'ım\Kaynak Kütüphanesi</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-akademik" class="tab-content">
+            <div class="flex-container">
+                <div class="data-section flex-child">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-brands fa-whatsapp"></i> WhatsApp'tan Gelen Sorular</h3>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 15px;">Öğrencilerin WhatsApp botuna gönderdiği fotoğraflı sorular buraya düşer.</p>
+                    
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                        <span style="background: #D32F2F; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">BEKLİYOR</span>
+                        <div style="margin-top: 10px; font-weight: bold;">Ahmet Yılmaz</div>
+                        <div style="color: var(--text-secondary); font-size: 12px;">Not: "Hocam 3. soruda takıldım."</div>
+                        <button class="btn-delete" style="background: var(--gold); color: black; margin-top: 10px; width: 100%;"><i class="fa-solid fa-eye"></i> GÖRSELİ AÇ VE ÇÖZ</button>
+                    </div>
+                </div>
+                <div class="data-section flex-child-2">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;"><i class="fa-solid fa-check-double"></i> Çözülmüş Sorular (AI veya Manuel)</h3>
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span style="background: var(--green); color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">ÇÖZÜLDÜ (AI)</span>
+                            <div style="margin-top: 5px; font-weight: bold;">Elif Demir - Matematik Logaritma</div>
+                        </div>
+                        <i class="fa-brands fa-whatsapp" style="color: #25D366; font-size: 20px;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBN72EXR6QuwdFEwe42lDqnqGOjCgFL7oE",
+        authDomain: "busra-hoca-platform.firebaseapp.com",
+        projectId: "busra-hoca-platform",
+        storageBucket: "busra-hoca-platform.firebasestorage.app",
+        messagingSenderId: "361257580063",
+        appId: "1:361257580063:web:ce92167ceb7773c296472a"
+    };
+
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    auth.onAuthStateChanged((user) => {
+        if (!user || (user.email !== "busra@busraogretmen.com" && user.email !== "busra@bursaogretmen.com")) {
+            window.location.href = "index.html";
+        }
+    });
+
+    function changeTab(tabId, element) {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    function logout() { auth.signOut().then(() => window.location.href = "index.html"); }
+
+    document.getElementById('ogrFoto').addEventListener('change', function(e) {
+        const fileName = e.target.files[0] ? e.target.files[0].name : "<i class='fa-solid fa-camera'></i> Fotoğraf Seç / Sürükle (İsteğe Bağlı)";
+        document.getElementById('fileNameDisplay').innerHTML = fileName;
+    });
+
+    function anaSayfayiYukle() {
+        const bugun = new Date();
+        const lgsTarihi = new Date('2026-06-13');
+        const yksTarihi = new Date('2026-06-20');
+        
+        const lgsKalan = Math.ceil((lgsTarihi - bugun) / (1000 * 60 * 60 * 24));
+        const yksKalan = Math.ceil((yksTarihi - bugun) / (1000 * 60 * 60 * 24));
+        
+        document.getElementById('lgsSayac').innerText = lgsKalan > 0 ? lgsKalan : 0;
+        document.getElementById('yksSayac').innerText = yksKalan > 0 ? yksKalan : 0;
+
+        db.collection("ogrenciler").onSnapshot(snap => {
+            document.getElementById('dashOgrenciSayisi').innerText = snap.size;
+        });
+
+        db.collection("odevler").where("durum", "==", "Bekliyor").onSnapshot(snap => {
+            document.getElementById('dashOdemeSayisi').innerText = 0; 
+        });
+
+        db.collection("dersler").onSnapshot(snap => {
+            document.getElementById('dashDersSayisi').innerText = snap.size;
+            
+            let program = { "Pazartesi": [], "Salı": [], "Çarşamba": [], "Perşembe": [], "Cuma": [], "Cumartesi": [], "Pazar": [] };
+            
+            snap.forEach(doc => {
+                const d = doc.data();
+                if(program[d["Gün"]]) { program[d["Gün"]].push(d); }
+            });
+
+            const grid = document.getElementById('haftalikProgramGrid');
+            grid.innerHTML = "";
+            
+            const gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+            const jsGunIndeks = [1, 2, 3, 4, 5, 6, 0];
+            const bugunIndeks = bugun.getDay();
+
+            gunler.forEach((gun, index) => {
+                const kisaltma = gun.substring(0,3);
+                const isBugun = jsGunIndeks[index] === bugunIndeks;
+                const headerClass = isBugun ? "dashboard-schedule-header today" : "dashboard-schedule-header";
+                
+                let derslerHtml = program[gun].length > 0 
+                    ? program[gun].map(d => `<div style="font-size:12px; margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:5px; color:var(--text-primary);"><b>${d["Saat"]}</b><br>${d["Öğrenci"]}</div>`).join("") 
+                    : `<div style="color:var(--text-secondary); font-size:12px; font-style:italic; text-align:center; margin-top:30px;">Ders Yok</div>`;
+
+                grid.innerHTML += `
+                    <div class="dashboard-schedule-card">
+                        <div class="${headerClass}">
+                            ${kisaltma}
+                        </div>
+                        <div style="padding: 15px; flex: 1; overflow-y: auto;">
+                            ${derslerHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function ogrencileriDinle() {
+        db.collection("ogrenciler").orderBy("Ad Soyad").onSnapshot((snapshot) => {
+            const gridOgr = document.getElementById("studentGrid");
+            const tbodyMuhasebe = document.getElementById("muhasebeTableBody");
+            const sayac = document.getElementById("ogrSayisi");
+            
+            const seciciListesi = [
+                "dersOgrenciSecici", "yoklamaOgrenciSecici", "muhasebeOgrenciSecici", 
+                "odevOgrenciSecici", "konuOgrenciSecici", "soruOgrenciSecici", 
+                "rozetOgrenciSecici", "denemeOgrenciSecici", "telafiOgrenciSecici", 
+                "programOgrenciSecici", "raporOgrenciSecici"
+            ];
+            const filtreListesi = ["yoklamaFiltreOgrenci", "odevFiltreOgrenci", "konuFiltreOgrenci", "soruFiltreOgrenci", "denemeFiltreOgrenci"];
+            
+            gridOgr.innerHTML = ""; tbodyMuhasebe.innerHTML = "";
+            seciciListesi.forEach(id => {
+                if(document.getElementById(id)) {
+                    document.getElementById(id).innerHTML = '<option value="">Öğrenci Seçin</option>';
+                }
+            });
+            filtreListesi.forEach(id => {
+                if(document.getElementById(id)) {
+                    document.getElementById(id).innerHTML = '<option value="Tümü">Tüm Öğrenciler</option>';
+                }
+            });
+            
+            sayac.innerText = snapshot.size;
+
+            if(!snapshot.empty) {
+                snapshot.forEach((doc) => {
+                    const veri = doc.data(); 
+                    const id = doc.id; 
+                    const adSoyad = veri["Ad Soyad"] || "İsimsiz";
+                    
+                    if(document.getElementById("dersOgrenciSecici")) {
+                        document.getElementById("dersOgrenciSecici").innerHTML += `<option value="${adSoyad}">${adSoyad}</option>`;
+                    }
+                    seciciListesi.slice(1).forEach(sid => {
+                        if(document.getElementById(sid)) {
+                            document.getElementById(sid).innerHTML += `<option value="${id}">${adSoyad}</option>`;
+                        }
+                    });
+                    filtreListesi.forEach(fid => {
+                        if(document.getElementById(fid)) {
+                            document.getElementById(fid).innerHTML += `<option value="${id}">${adSoyad}</option>`;
+                        }
+                    });
+
+                    const fotoHtml = veri.fotograf_url ? `<img src="${veri.fotograf_url}" class="student-photo">` : `<div class="student-photo"><i class="fa-solid fa-user"></i></div>`;
+                    
+                    gridOgr.innerHTML += `
+                        <div class="student-card">
+                            <div class="student-photo-wrapper">${fotoHtml}</div>
+                            <h4 style="color:var(--gold); margin-bottom:15px; font-size:16px; text-align:center;">${adSoyad}</h4>
+                            
+                            <div class="student-info-row"><i class="fa-solid fa-phone"></i> ${veri["Ogrenci Telefonu"] || "-"}</div>
+                            <div class="student-info-row"><i class="fa-solid fa-envelope"></i> ${veri["Ogrenci Mail"] || "-"}</div>
+                            
+                            <div style="height:1px; background:var(--border-color); margin:10px 0;"></div>
+                            
+                            <div class="student-info-row" style="color:var(--text-primary); font-weight:bold;"><i class="fa-solid fa-user-tie"></i> ${veri["Veli Adı"] || "-"} (${veri["Veli Yakınlık"] || "-"})</div>
+                            <div class="student-info-row"><i class="fa-solid fa-phone"></i> ${veri["Veli Telefonu"] || "-"}</div>
+                            <div class="student-info-row"><i class="fa-solid fa-envelope"></i> ${veri["Veli Mail"] || "-"}</div>
+                            
+                            <div style="height:1px; background:var(--border-color); margin:10px 0;"></div>
+                            
+                            <div class="student-info-row"><i class="fa-solid fa-wallet"></i> ${veri["Ücret Bilgisi"] || "Belirtilmedi"}</div>
+                            <div class="student-info-row"><i class="fa-regular fa-calendar"></i> ${veri["Ödeme Günü"] || "Belirtilmedi"}</div>
+
+                            <button class="submit-btn" style="background:#ff4d4d; color:white; margin-top:15px; padding:8px; width:100%;" onclick="ogrenciSil('${id}', '${adSoyad}')">KAYDI SİL</button>
+                        </div>
+                    `;
+                    
+                    tbodyMuhasebe.innerHTML += `
+                        <tr>
+                            <td style="font-weight:bold; color:var(--gold);">${adSoyad}</td>
+                            <td style="font-weight:bold; color:var(--text-primary);">${veri["Ücret Bilgisi"]||"-"}</td>
+                            <td style="color:var(--text-secondary);"><i class="fa-regular fa-calendar"></i> ${veri["Ödeme Günü"]||"-"}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                gridOgr.innerHTML = "<p style='color:var(--text-secondary); padding:20px;'>Henüz kayıtlı öğrenci bulunmuyor.</p>";
+            }
+        });
+    }
+
+    document.getElementById("addStudentForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const loading = document.getElementById("loading");
+        if(loading) loading.style.display = "block";
+
+        try {
+            const fileInput = document.getElementById("ogrFoto");
+            let photoUrl = "";
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const ref = storage.ref(`ogrenci_profil/${Date.now()}_${file.name}`);
+                await ref.put(file);
+                photoUrl = await ref.getDownloadURL();
+            }
+
+            const yeniOgrenci = {
+                "Ad Soyad": document.getElementById("ogrAd").value.trim(),
+                "Ogrenci Telefonu": document.getElementById("ogrTel").value.trim(),
+                "Ogrenci Mail": document.getElementById("ogrMail").value.trim().toLowerCase(),
+                "Veli Adı": document.getElementById("veliAd").value.trim(),
+                "Veli Telefonu": document.getElementById("veliTel").value.trim(),
+                "Veli Mail": document.getElementById("veliMail").value.trim().toLowerCase(),
+                "Veli Yakınlık": document.getElementById("veliYakinlik").value.trim(),
+                "Ücret Bilgisi": document.getElementById("ogrUcret").value.trim(),
+                "Ödeme Günü": document.getElementById("ogrOdemeGunu").value.trim(),
+                "fotograf_url": photoUrl,
+                "basari_rozetleri": 0, "haftalik_toplam_soru": 0, "son_deneme_neti": 0,
+                "grafik_verileri": [0,0,0,0,0,0],
+                "eklenme_tarihi": firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await db.collection("ogrenciler").add(yeniOgrenci);
+            
+            if(loading) loading.style.display = "none";
+            document.getElementById("addStudentForm").reset();
+            document.getElementById('fileNameDisplay').innerHTML = "<i class='fa-solid fa-camera'></i> Fotoğraf Seç / Sürükle (İsteğe Bağlı)";
+            
+        } catch (error) {
+            if(loading) loading.style.display = "none";
+            alert("Kayıt sırasında hata oluştu: " + error.message);
+        }
+    });
+
+    function ogrenciSil(id, ad) { if(confirm(`DİKKAT: ${ad} sistemden tamamen silinecek?`)) db.collection("ogrenciler").doc(id).delete(); }
+
+    function konulariDinle() {
+        const filtreId = document.getElementById("konuFiltreOgrenci").value;
+        let sorgu = db.collection("konu_takibi");
+        if (filtreId !== "Tümü" && filtreId !== "") sorgu = sorgu.where("ogrenci_id", "==", filtreId);
+
+        sorgu.onSnapshot((snapshot) => {
+            const liste = document.getElementById("konuListesi");
+            liste.innerHTML = "";
+            if(snapshot.empty) { liste.innerHTML = "<p style='color: var(--text-secondary);'>Kayıt yok.</p>"; return; }
+
+            let konular = [];
+            snapshot.forEach(doc => konular.push({ id: doc.id, ...doc.data() }));
+
+            konular.forEach((k) => {
+                const isIslandi = (k.durum === "İşlendi" || k.durum === "Tamamlandı") ? "checked" : "";
+                const bgRenk = isIslandi ? "#044d2933" : "var(--card-bg)";
+                const textStili = isIslandi ? "text-decoration: line-through; color: var(--text-secondary);" : "color: var(--text-primary);";
+
+                liste.innerHTML += `
+                    <div style="background: ${bgRenk}; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size: 15px; font-weight: bold; ${textStili}">[${k.kategori || "Genel"}] ${k["Konu Adı"] || k.baslik || "-"}</div>
+                            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">
+                                <i class="fa-solid fa-user"></i> ${k.ogrenci_adi || "-"} | Eklenme: ${k.tarih || "-"}
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <label style="font-size:12px; font-weight:bold; color:var(--green);"><input type="checkbox" ${isIslandi} onchange="konuDurumGuncelle('${k.id}', this.checked)"> İŞLENDİ</label>
+                            <button class="btn-delete" onclick="konuSil('${k.id}')">SİL</button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function konuEkle() {
+        const secici = document.getElementById("konuOgrenciSecici");
+        if(!secici.value) return alert("Öğrenci seçin!");
+        const kategori = document.getElementById("konuKategori").value.trim() || "Genel";
+        const baslik = document.getElementById("konuBaslik").value.trim();
+        if(!baslik) return alert("Konu adı girin!");
+
+        const dateStr = new Date().toLocaleDateString('tr-TR');
+        db.collection("konu_takibi").add({
+            ogrenci_id: secici.value, ogrenci_adi: secici.options[secici.selectedIndex].text,
+            kategori: kategori, "Konu Adı": baslik, durum: "Bekliyor", tarih: dateStr
+        }).then(() => { document.getElementById("konuBaslik").value = ""; });
+    }
+
+    function konuDurumGuncelle(id, isChecked) { db.collection("konu_takibi").doc(id).update({ durum: isChecked ? "İşlendi" : "Bekliyor" }); }
+    function konuSil(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection("konu_takibi").doc(id).delete(); }
+
+    function getHafta() {
+        const d = new Date();
+        const date = new Date(d.getTime());
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+        const week1 = new Date(date.getFullYear(), 0, 4);
+        const hafta = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+        return `${date.getFullYear()}-W${hafta.toString().padStart(2, '0')}`;
+    }
+
+    function sorulariDinle() {
+        const filtreId = document.getElementById("soruFiltreOgrenci").value;
+        let sorgu = db.collection("soru_kayitlari");
+        if (filtreId !== "Tümü" && filtreId !== "") sorgu = sorgu.where("ogrenci_id", "==", filtreId);
+
+        sorgu.onSnapshot((snapshot) => {
+            const liste = document.getElementById("soruListesi");
+            liste.innerHTML = "";
+            if(snapshot.empty) { liste.innerHTML = "<p style='color: var(--text-secondary);'>Kayıt yok.</p>"; return; }
+
+            let sorular = [];
+            snapshot.forEach(doc => sorular.push({ id: doc.id, ...doc.data() }));
+            
+            sorular.sort((a, b) => {
+                let d1 = a.tarih ? a.tarih.split('.').reverse().join('-') : "";
+                let d2 = b.tarih ? b.tarih.split('.').reverse().join('-') : "";
+                return d2.localeCompare(d1);
+            });
+
+            sorular.forEach((s) => {
+                liste.innerHTML += `
+                    <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size: 15px; font-weight: bold; color: var(--text-primary);">${s.ders || "Genel"}</div>
+                            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">
+                                <i class="fa-solid fa-user"></i> ${s.ogrenci_adi || "-"} | Tarih: ${s.tarih || "-"} | Hafta: ${s.hafta || "-"}
+                            </div>
+                            <div style="font-size: 13px; font-weight:bold; color:var(--gold); margin-top:5px;">
+                                Çözülen: ${s.soru_sayisi || 0} | D: <span style="color:#388E3C;">${s.dogru || 0}</span> | Y: <span style="color:#D32F2F;">${s.yanlis || 0}</span>
+                            </div>
+                        </div>
+                        <button class="btn-delete" onclick="soruSil('${s.id}')">SİL</button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function soruEkle() {
+        const secici = document.getElementById("soruOgrenciSecici");
+        if(!secici.value) return alert("Öğrenci seçin!");
+        
+        const ders = document.getElementById("soruDers").value.trim() || "Genel";
+        const cozulen = document.getElementById("soruCozulen").value || 0;
+        const dogru = document.getElementById("soruDogru").value || 0;
+        const yanlis = document.getElementById("soruYanlis").value || 0;
+
+        const dateStr = new Date().toLocaleDateString('tr-TR');
+        db.collection("soru_kayitlari").add({
+            ogrenci_id: secici.value, ogrenci_adi: secici.options[secici.selectedIndex].text,
+            ders: ders, soru_sayisi: parseInt(cozulen), dogru: parseInt(dogru), yanlis: parseInt(yanlis),
+            hafta: getHafta(), tarih: dateStr
+        }).then(() => {
+            document.getElementById("soruCozulen").value = "";
+            document.getElementById("soruDogru").value = "";
+            document.getElementById("soruYanlis").value = "";
+        });
+    }
+
+    function soruSil(id) { if(confirm("Kaydı silmek istediğinize emin misiniz?")) db.collection("soru_kayitlari").doc(id).delete(); }
+
+    document.getElementById("muhasebeOgrenciSecici").addEventListener("change", async function(e) {
+        const docId = e.target.value;
+        const ucretInput = document.getElementById("muhasebeUcret");
+        const gunInput = document.getElementById("muhasebeGun");
+        
+        if(!docId) { ucretInput.value = ""; gunInput.value = ""; return; }
+        
+        const doc = await db.collection("ogrenciler").doc(docId).get();
+        if(doc.exists) {
+            const data = doc.data();
+            ucretInput.value = data["Ücret Bilgisi"] || "";
+            gunInput.value = data["Ödeme Günü"] || "";
+        }
+    });
+    
+    function muhasebeKaydet() {
+        const docId = document.getElementById("muhasebeOgrenciSecici").value;
+        const ucret = document.getElementById("muhasebeUcret").value.trim();
+        const gun = document.getElementById("muhasebeGun").value.trim();
+        
+        if(!docId) { alert("Lütfen güncellemek için bir öğrenci seçin!"); return; }
+        
+        db.collection("ogrenciler").doc(docId).update({
+            "Ücret Bilgisi": ucret, "Ödeme Günü": gun
+        }).then(() => {
+            alert("Harika! Öğrencinin muhasebe bilgileri başarıyla güncellendi.");
+            document.getElementById("muhasebeUcret").value = "";
+            document.getElementById("muhasebeGun").value = "";
+            document.getElementById("muhasebeOgrenciSecici").value = "";
+        }).catch(e => alert("Hata oluştu: " + e.message));
+    }
+
+    function ajandayiDinle() {
+        db.collection("ajanda").orderBy("tarih", "desc").onSnapshot((snapshot) => {
+            const liste = document.getElementById("ajandaListesi");
+            liste.innerHTML = "";
+            if(snapshot.empty) { liste.innerHTML = "<p style='color: var(--text-secondary); font-style: italic;'>Kayıtlı görev bulunmuyor.</p>"; return; }
+
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const checkDurumu = data.durum === 1 ? "checked" : "";
+                const textStili = data.durum === 1 ? "text-decoration: line-through; color: var(--text-secondary);" : "color: var(--text-primary);";
+
+                liste.innerHTML += `
+                    <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <input type="checkbox" style="transform: scale(1.5);" ${checkDurumu} onchange="gorevDurumGuncelle('${doc.id}', this.checked)">
+                            <span style="font-size: 16px; font-weight: bold; ${textStili}">${data.metin}</span>
+                        </div>
+                        <button class="btn-delete" onclick="gorevSil('${doc.id}')">SİL</button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function gorevEkle() {
+        const input = document.getElementById("yeniGorevInput");
+        const metin = input.value.trim();
+        if(!metin) return;
+        db.collection("ajanda").add({ metin: metin, durum: 0, tarih: firebase.firestore.FieldValue.serverTimestamp() }).then(() => input.value = "");
+    }
+    function gorevDurumGuncelle(id, isChecked) { db.collection("ajanda").doc(id).update({ durum: isChecked ? 1 : 0 }); }
+    function gorevSil(id) { db.collection("ajanda").doc(id).delete(); }
+
+    function dersleriDinle() {
+        db.collection("dersler").onSnapshot((snapshot) => {
+            const liste = document.getElementById("derslerListesi");
+            liste.innerHTML = "";
+            if(snapshot.empty) { liste.innerHTML = "<p style='color: var(--text-secondary); font-style: italic;'>Planlanmış ders bulunmuyor.</p>"; return; }
+
+            snapshot.forEach((doc) => {
+                const d = doc.data();
+                liste.innerHTML += `
+                    <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; border-left: 4px solid var(--gold); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 16px; font-weight: bold; color: var(--text-primary);">${d["Ders Adı"] || d["Ders"]}</div>
+                            <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">
+                                <i class="fa-solid fa-user-graduate"></i> ${d["Öğrenci"]} | 
+                                <i class="fa-regular fa-clock"></i> ${d["Gün"]} - ${d["Saat"] || d["saat"]}
+                            </div>
+                        </div>
+                        <button class="btn-delete" onclick="dersSil('${doc.id}')">SİL</button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function dersEkle() {
+        const ogr = document.getElementById("dersOgrenciSecici").value;
+        const ad = document.getElementById("dersAdiInput").value.trim();
+        const gun = document.getElementById("dersGunSecici").value;
+        const saat = document.getElementById("dersSaatInput").value;
+
+        if(!ogr || !ad || !saat) { alert("Lütfen öğrenciyi, ders adını ve saatini tam girin."); return; }
+
+        db.collection("dersler").add({
+            "Öğrenci": ogr, "Ders Adı": ad, "Ders": ad, "Gün": gun, "Saat": saat, "saat": saat,
+            "eklenme_tarihi": firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => { document.getElementById("dersAdiInput").value = ""; document.getElementById("dersSaatInput").value = ""; });
+    }
+    function dersSil(id) { if(confirm("Dersi silmek istediğinize emin misiniz?")) { db.collection("dersler").doc(id).delete(); } }
+
+    function yoklamalariDinle() {
+        const filtreOgrenciId = document.getElementById("yoklamaFiltreOgrenci").value;
+        let sorgu = db.collection("yoklama");
+        if (filtreOgrenciId !== "Tümü" && filtreOgrenciId !== "") {
+            sorgu = sorgu.where("ogrenci_id", "==", filtreOgrenciId);
+        }
+
+        sorgu.onSnapshot((snapshot) => {
+            const liste = document.getElementById("yoklamaListesi");
+            liste.innerHTML = "";
+            if(snapshot.empty) { liste.innerHTML = "<p style='color: var(--text-secondary); font-style: italic;'>Kayıtlı yoklama bulunmuyor.</p>"; return; }
+
+            let yoklamalar = [];
+            snapshot.forEach(doc => yoklamalar.push({ id: doc.id, ...doc.data() }));
+            yoklamalar.sort((a, b) => new Date(b.kayit_tarihi) - new Date(a.kayit_tarihi));
+
+            yoklamalar.forEach((y) => {
+                const durumRenk = y.durum === "Geldi" ? "#388E3C" : (y.durum === "Gelmedi" ? "#D32F2F" : (y.durum === "Geç Geldi" ? "#FBC02D" : "gray"));
+                liste.innerHTML += `
+                    <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size: 14px; font-weight: bold; color: var(--text-primary);">${y.tarih} - ${y.ders}</div>
+                            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">Öğrenci: ${y.ogrenci_adi || "-"}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span style="background-color: ${durumRenk}; color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold;">${y.durum}</span>
+                            <button class="btn-delete" onclick="yoklamaSil('${y.id}')">SİL</button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function yoklamaEkle() {
+        const secici = document.getElementById("yoklamaOgrenciSecici");
+        const ogrId = secici.value;
+        if(!ogrId) { alert("Lütfen öğrenci seçin!"); return; }
+        const ogrAdi = secici.options[secici.selectedIndex].text;
+        const tarih = document.getElementById("yoklamaTarihInput").value;
+        const ders = document.getElementById("yoklamaDersInput").value.trim() || "Genel Ders";
+        const durum = document.getElementById("yoklamaDurumSecici").value;
+
+        if(!tarih) { alert("Lütfen tarih seçin!"); return; }
+
+        const dateObj = new Date(tarih);
+        const formatliTarih = `${("0" + dateObj.getDate()).slice(-2)}.${("0" + (dateObj.getMonth() + 1)).slice(-2)}.${dateObj.getFullYear()}`;
+
+        db.collection("yoklama").add({
+            ogrenci_id: ogrId, ogrenci_adi: ogrAdi, tarih: formatliTarih, ders: ders, durum: durum,
+            kayit_tarihi: new Date().toISOString()
+        }).then(() => { document.getElementById("yoklamaDersInput").value = ""; }).catch(err => alert("Hata: " + err.message));
+    }
+    function yoklamaSil(id) { if(confirm("Bu yoklama kaydını silmek istediğinize emin misiniz?")) { db.collection("yoklama").doc(id).delete(); } }
+
+    function odevleriDinle() {
+        const filtreId = document.getElementById("odevFiltreOgrenci").value;
+        let sorgu = db.collection("odevler");
+        if (filtreId !== "Tümü" && filtreId !== "") {
+            sorgu = sorgu.where("ogrenci_id", "==", filtreId);
+        }
+
+        sorgu.onSnapshot((snapshot) => {
+            const liste = document.getElementById("odevListesi");
+            liste.innerHTML = "";
+            if(snapshot.empty) { liste.innerHTML = "<p style='color: var(--text-secondary); font-style: italic;'>Kayıtlı ödev bulunmuyor.</p>"; return; }
+
+            let odevler = [];
+            snapshot.forEach(doc => odevler.push({ id: doc.id, ...doc.data() }));
+            odevler.sort((a, b) => new Date(b.kayit_tarihi) - new Date(a.kayit_tarihi));
+
+            odevler.forEach((o) => {
+                const bgRenk = o.durum === "Tamamlandı" ? "#044d2933" : (o.durum === "Yapılmadı" ? "#ff4d4d33" : "var(--card-bg)");
+                liste.innerHTML += `
+                    <div style="background: ${bgRenk}; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size: 15px; font-weight: bold; color: var(--text-primary);">${o.baslik}</div>
+                            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">
+                                <i class="fa-solid fa-user"></i> ${o.ogrenci_adi || "-"} | 
+                                <i class="fa-regular fa-calendar-xmark"></i> Teslim: ${o.teslim_tarihi}
+                            </div>
+                            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px; font-style: italic;">${o.detay}</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-end;">
+                            <select onchange="odevDurumGuncelle('${o.id}', this.value)" style="padding: 4px; border-radius: 4px; font-size: 12px; border: 1px solid var(--border-color); color:var(--text-primary); background:var(--bg-color);">
+                                <option value="Bekliyor" ${o.durum === 'Bekliyor' ? 'selected' : ''}>Bekliyor</option>
+                                <option value="Tamamlandı" ${o.durum === 'Tamamlandı' ? 'selected' : ''}>Tamamlandı</option>
+                                <option value="Yapılmadı" ${o.durum === 'Yapılmadı' ? 'selected' : ''}>Yapılmadı</option>
+                            </select>
+                            <button class="btn-delete" onclick="odevSil('${o.id}')" style="padding: 4px 8px; font-size: 10px;">SİL</button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function odevEkle() {
+        const secici = document.getElementById("odevOgrenciSecici");
+        const ogrId = secici.value;
+        if(!ogrId) { alert("Lütfen öğrenci seçin!"); return; }
+        
+        const ogrAdi = secici.options[secici.selectedIndex].text;
+        const baslik = document.getElementById("odevBaslik").value.trim();
+        const tarih = document.getElementById("odevTarih").value;
+        const detay = document.getElementById("odevDetay").value.trim();
+
+        if(!baslik || !tarih) { alert("Lütfen ödev başlığı ve teslim tarihi girin!"); return; }
+
+        const dateObj = new Date(tarih);
+        const formatliTarih = `${("0" + dateObj.getDate()).slice(-2)}.${("0" + (dateObj.getMonth() + 1)).slice(-2)}.${dateObj.getFullYear()}`;
+
+        db.collection("odevler").add({
+            ogrenci_id: ogrId, ogrenci_adi: ogrAdi, baslik: baslik, teslim_tarihi: formatliTarih,
+            detay: detay, durum: "Bekliyor", kayit_tarihi: new Date().toISOString()
+        }).then(() => {
+            document.getElementById("odevBaslik").value = "";
+            document.getElementById("odevDetay").value = "";
+        }).catch(err => alert("Hata: " + err.message));
+    }
+
+    function odevDurumGuncelle(id, yeniDurum) { db.collection("odevler").doc(id).update({ durum: yeniDurum }); }
+    function odevSil(id) { if(confirm("Ödevi silmek istediğinize emin misiniz?")) { db.collection("odevler").doc(id).delete(); } }
+
+    async function rozetGonder() {
+        const secici = document.getElementById("rozetOgrenciSecici");
+        const ogrId = secici.value;
+        if(!ogrId) { alert("Lütfen rozet gönderilecek öğrenciyi seçin!"); return; }
+        
+        const ogrAdi = secici.options[secici.selectedIndex].text;
+        const rozetTipi = document.getElementById("rozetTipiSecici").value;
+        
+        const badgeMap = {
+            "sampiyon": { title: "Haftanın Şampiyonu", color: "#FFD700", icon: "fa-trophy" },
+            "ikinci": { title: "Haftanın İkincisi", color: "#C0C0C0", icon: "fa-medal" },
+            "ucuncu": { title: "Haftanın Üçüncüsü", color: "#CD7F32", icon: "fa-award" }
+        };
+        
+        const secilenRozet = badgeMap[rozetTipi];
+        const tarihStr = new Date().toLocaleDateString('tr-TR') + " " + new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+        
+        const yeniRozet = {
+            type: rozetTipi,
+            title: secilenRozet.title,
+            icon: secilenRozet.icon,
+            color: secilenRozet.color,
+            tarih_str: tarihStr
+        };
+
+        try {
+            const docRef = db.collection("ogrenciler").doc(ogrId);
+            const doc = await docRef.get();
+            if(doc.exists) {
+                const data = doc.data();
+                const mevcutRozetler = data.kazanilan_rozetler_listesi || [];
+                const mevcutSayi = data.basari_rozetleri || 0;
+                
+                mevcutRozetler.push(yeniRozet);
+                
+                await docRef.update({
+                    kazanilan_rozetler_listesi: mevcutRozetler,
+                    basari_rozetleri: mevcutSayi + 1,
+                    son_rozet_tarihi: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                alert(`Muazzam! ${ogrAdi} bu haftanın ${secilenRozet.title.split("Haftanın ")[1]} rozetini kazandı!`);
+                ogrenciRozetleriniGoster(); 
+            }
+        } catch(e) {
+            alert("Rozet gönderilirken hata oluştu: " + e.message);
+        }
+    }
+
+    async function ogrenciRozetleriniGoster() {
+        const ogrId = document.getElementById("rozetOgrenciSecici").value;
+        const liste = document.getElementById("rozetListesi");
+        liste.innerHTML = "";
+        
+        if(!ogrId) { 
+            liste.innerHTML = "<p style='color: var(--text-secondary);'>Görüntülemek için sol taraftan öğrenci seçin.</p>";
+            return; 
+        }
+        
+        try {
+            const doc = await db.collection("ogrenciler").doc(ogrId).get();
+            if(doc.exists) {
+                const data = doc.data();
+                const rozetler = data.kazanilan_rozetler_listesi || [];
+                
+                if(rozetler.length === 0) {
+                    liste.innerHTML = "<p style='color: var(--text-secondary);'>Bu öğrencinin henüz kazandığı bir rozet bulunmuyor.</p>";
+                    return;
+                }
+                
+                const rozetlerKopya = [...rozetler];
+                rozetlerKopya.reverse().forEach((r) => {
+                    liste.innerHTML += `
+                        <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; display: flex; align-items: center; border: 1px solid var(--border-color); margin-bottom: 10px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background-color: var(--bg-color); display: flex; align-items: center; justify-content: center; margin-right: 15px; border: 2px solid ${r.color || 'var(--gold)'}; flex-shrink: 0;">
+                                <i class="fa-solid ${r.icon || 'fa-medal'}" style="color: ${r.color || 'var(--gold)'}; font-size: 20px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-size: 16px; font-weight: bold; color: var(--text-primary);">${r.title}</div>
+                                <div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">
+                                    <i class="fa-regular fa-clock"></i> Kazanım Tarihi: ${r.tarih_str}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        } catch(e) {
+            console.error("Rozetler çekilemedi: ", e);
+        }
+    }
+
+    function aiMesajGonder() {
+        const input = document.getElementById("aiMesajGirdisi");
+        const mesaj = input.value.trim();
+        if(!mesaj) return;
+        
+        const sohbetAlan = document.getElementById("aiSohbetGecmisi");
+        sohbetAlan.innerHTML += `<div class="chat-bubble chat-user">${mesaj}</div>`;
+        input.value = "";
+        
+        setTimeout(() => {
+            sohbetAlan.innerHTML += `<div class="chat-bubble chat-bot">Bu özellik yakında Gemini API üzerinden Python sunucusuna bağlanarak yanıt verecektir. Sorduğun soru sisteme kaydedildi.</div>`;
+            sohbetAlan.scrollTop = sohbetAlan.scrollHeight;
+        }, 1000);
+    }
+
+    function mufredatSorgula() {
+        const sinif = document.getElementById("mufredatSinif").value;
+        const ders = document.getElementById("mufredatDers").value;
+        const sonucEkrani = document.getElementById("mufredatSonucEkrani");
+        
+        sonucEkrani.innerHTML = `<span style="color: var(--gold);"><i class="fa-solid fa-spinner fa-spin"></i> ${sinif} ${ders} müfredatı yapay zekadan çekiliyor...</span>`;
+        
+        setTimeout(() => {
+            sonucEkrani.innerHTML = `<b style="color:var(--green)">${sinif} ${ders} Güncel Müfredatı:</b>\n\n1. Ünite: Sayılar ve Cebir\n2. Ünite: Fonksiyonlar ve Denklemler\n\n---\n*Bu sonuçlar Google Gemini altyapısı ile MEB verilerinden simüle edilmiştir.*`;
+        }, 1500);
+    }
+
+    function soruUret() {
+        alert("Konu bazlı sorular yapay zeka tarafından üretiliyor ve PDF'e dökülüyor... (Python entegrasyonu gerektirir)");
+    }
+
+    // ==========================================
+    // YENİ ENTEGRE EDİLEN: DENEME SINAVLARI MODÜLÜ
+    // ==========================================
+    function denemeSistemeEkle() {
+        const secici = document.getElementById("denemeOgrenciSecici");
+        const ogrId = secici.value;
+        if(!ogrId) { alert("Lütfen öğrenci seçin!"); return; }
+        
+        const ogrAdi = secici.options[secici.selectedIndex].text;
+        const adi = document.getElementById("denemeAdi").value.trim();
+        const dogru = document.getElementById("denemeDogru").value || 0;
+        const yanlis = document.getElementById("denemeYanlis").value || 0;
+        const net = document.getElementById("denemeNet").value;
+
+        if(!adi || !net) { alert("Lütfen deneme adı ve net alanlarını doldurun!"); return; }
+
+        const dateStr = new Date().toLocaleDateString('tr-TR');
+
+        db.collection("denemeler").add({
+            ogrenci_id: ogrId,
+            ogrenci_adi: ogrAdi,
+            deneme_adi: adi,
+            dogru: parseInt(dogru),
+            yanlis: parseInt(yanlis),
+            net: parseFloat(net),
+            tarih: dateStr,
+            kayit_tarihi: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            db.collection("ogrenciler").doc(ogrId).update({
+                son_deneme_neti: parseFloat(net)
+            });
+            
+            document.getElementById("denemeAdi").value = "";
+            document.getElementById("denemeDogru").value = "";
+            document.getElementById("denemeYanlis").value = "";
+            document.getElementById("denemeNet").value = "";
+            alert("Deneme başarıyla kaydedildi! (Yapay Zeka ve PDF Mail altyapısı Python tarafında aktif edilecektir)");
+        }).catch(err => alert("Hata: " + err.message));
+    }
+
+    function denemeleriDinle() {
+        const filtreId = document.getElementById("denemeFiltreOgrenci").value;
+        let sorgu = db.collection("denemeler");
+        
+        if (filtreId && filtreId !== "Tümü") {
+            sorgu = sorgu.where("ogrenci_id", "==", filtreId);
+        }
+
+        sorgu.onSnapshot((snapshot) => {
+            const liste = document.getElementById("denemeListesi");
+            liste.innerHTML = "";
+            if(snapshot.empty) { 
+                liste.innerHTML = "<p style='color: var(--text-secondary); font-style: italic;'>Kayıtlı deneme bulunmuyor.</p>"; 
+                return; 
+            }
+
+            let denemeler = [];
+            snapshot.forEach(doc => denemeler.push({ id: doc.id, ...doc.data() }));
+            
+            denemeler.sort((a, b) => {
+                let t1 = a.kayit_tarihi ? a.kayit_tarihi.toMillis() : 0;
+                let t2 = b.kayit_tarihi ? b.kayit_tarihi.toMillis() : 0;
+                return t2 - t1;
+            });
+
+            denemeler.forEach((d) => {
+                liste.innerHTML += `
+                    <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-size: 15px; font-weight: bold; color: var(--text-primary);">${d.deneme_adi}</div>
+                            <div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">
+                                <i class="fa-solid fa-user"></i> ${d.ogrenci_adi || "-"} | <i class="fa-regular fa-calendar"></i> ${d.tarih || "-"}
+                            </div>
+                            <div style="font-size: 13px; font-weight:bold; color:var(--gold); margin-top:5px;">
+                                Doğru: <span style="color:#388E3C;">${d.dogru || 0}</span> | Yanlış: <span style="color:#D32F2F;">${d.yanlis || 0}</span> | Net: <span style="color:white; font-size: 14px;">${d.net}</span>
+                            </div>
+                        </div>
+                        <button class="btn-delete" onclick="denemeSil('${d.id}')">SİL</button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    function denemeSil(id) { 
+        if(confirm("Bu deneme kaydını tamamen silmek istediğinize emin misiniz?")) { 
+            db.collection("denemeler").doc(id).delete(); 
+        } 
+    }
+
+    window.onload = function() {
+        anaSayfayiYukle();
+        ogrencileriDinle();
+        ajandayiDinle();
+        dersleriDinle();
+        yoklamalariDinle();
+        odevleriDinle();
+        konulariDinle();
+        sorulariDinle();
+        denemeleriDinle();
+    };
+</script>
+</body>
+</html>

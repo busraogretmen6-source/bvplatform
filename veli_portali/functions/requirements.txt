@@ -1,0 +1,7 @@
+firebase_functions~=0.5.0
+firebase-admin
+firebase-functions
+google-generativeai
+reportlab
+flask
+gunicorn
