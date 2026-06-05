@@ -10,7 +10,7 @@
     ]
   },
   "functions": {
-    "source": "functions",
+    "source": ".",
     "runtime": "python311",
     "ignore": [
       "venv",
