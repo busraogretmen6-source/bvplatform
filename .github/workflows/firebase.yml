@@ -21,4 +21,4 @@ jobs:
       - name: Firebase'e Dağıt (Deploy)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only functions --non-interactive
+        run: firebase deploy --only functions --non-interactive --project busra-hoca-platform
